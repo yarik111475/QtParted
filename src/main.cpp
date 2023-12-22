@@ -22,11 +22,11 @@
 
 #define EXT2_MIN_BLOCK_LOG_SIZE		10
 
-QJsonObject getFilesysObject(const QString& path)
+QMap<QString,QVariant> getFilesysObject(const QString& partPath)
 {
     int flags {EXT2_FLAG_JOURNAL_DEV_OK | EXT2_FLAG_SOFTSUPP_FEATURES | EXT2_FLAG_64BITS};
     ext2_filsys fs;
-    errcode_t retVal {ext2fs_open(qPrintable(path),flags,0,0,unix_io_manager,&fs)};
+    errcode_t retVal {ext2fs_open(qPrintable(partPath),flags,0,0,unix_io_manager,&fs)};
     if(!retVal){
         auto super {fs->super};
         if(super){
@@ -114,8 +114,7 @@ QJsonObject getFilesysObject(const QString& path)
             const long long maxMountCount {super->s_max_mnt_count};
             const long long checkedInterval {super->s_checkinterval};
 
-            QJsonObject filesysObject{
-                {"volume_path",path},
+            QMap<QString,QVariant> filesysObject{
                 {"volume_name",volumeName},
                 {"last_mounted_on",lastMountedOn},
                 {"filesystem_uuid",filesystemUuid},
@@ -233,31 +232,39 @@ QJsonObject getFilesysObject(const QString& path)
             return filesysObject;
         }
     }
-    return QJsonObject {};
+    return QMap<QString,QVariant> {};
+}
+
+QJsonArray getMountpointObjects()
+{
+    QJsonArray mountpointObjects {};
+    {//mount_ponts
+        const QString fstabPath {"/etc/fstab"};
+        QFile file {fstabPath};
+        if(file.open(QIODevice::ReadOnly)){
+            const auto lines {file.readAll().split('\n')};
+            file.close();
+            std::for_each(lines.begin(),lines.end(),[&](const QByteArray& line){
+                const QString tempLine {line};
+                if(!tempLine.startsWith("#") && !tempLine.isEmpty()){
+                    const QJsonObject mountpointObject{
+                        {"file_system",tempLine.section(' ',0,0,QString::SectionSkipEmpty).simplified()},
+                        {"mount_point",tempLine.section(' ',1,1,QString::SectionSkipEmpty).simplified()},
+                        {"mntpoint_type",tempLine.section(' ',2,2,QString::SectionSkipEmpty).simplified()},
+                        {"options",tempLine.section(' ',3,3,QString::SectionSkipEmpty).simplified()},
+                        {"dump",tempLine.section(' ',4,4,QString::SectionSkipEmpty).simplified()},
+                        {"pass",tempLine.section(' ',5,5,QString::SectionSkipEmpty).simplified()}
+                    };
+                    mountpointObjects.push_back(mountpointObject);
+                }
+            });
+        }
+    }
+    return mountpointObjects;
 }
 
 int main(int argc, char *argv[])
 {
-#if 0
-    blkid_probe blkidProbe;
-    blkidProbe=blkid_new_probe_from_filename("/dev/sr0");
-    if(blkidProbe){
-        const char* uuid {};
-        blkid_do_fullprobe(blkidProbe);
-        blkid_probe_lookup_value(blkidProbe,"UUID",&uuid,NULL);
-        blkid_free_probe(blkidProbe);
-    }
-#endif
-#if 0
-    struct statvfs statvFs;
-    if((statvfs("/dev/sda1",&statvFs)) < 0){
-        int n=10;
-        std::cout<<"err";
-    }
-    else{
-        std::cout<<"done";
-    }
-#endif
     QSet<QString> partitionPathSet {};
     auto getDeviceType{[](int type){
             const QMap<int,QString> typesMap {
@@ -362,6 +369,8 @@ int main(int argc, char *argv[])
                     }
                     partitionFlag=ped_partition_flag_next(partitionFlag);
                 }
+                const bool partIsBootable {partitionFlagNames.contains("boot") ? true : false};
+
                 QString partUuid {};
                 {
                     blkid_probe blkidProbe {blkid_new_probe_from_filename(qPrintable(partPath))};
@@ -374,7 +383,6 @@ int main(int argc, char *argv[])
                     }
                 }
 
-
                 const QJsonObject partitionObject {
                     {"partition_name",partName},
                     {"partition_path",partPath},
@@ -384,7 +392,7 @@ int main(int argc, char *argv[])
                     {"partition_length",partGeometry.length},
                     {"partition_type",partType},
                     {"partition_number",partNumbber},
-                    {"partition_flags",partitionFlagNames},
+                    {"boot_partition",partIsBootable},
                     {"partition_uuid",partUuid},
                 };
 
@@ -416,6 +424,7 @@ int main(int argc, char *argv[])
                 blkid_free_probe(blkidProbe);
             }
         }
+
         const QJsonObject deviceObject {
             {"model",devicePtr->model},
             {"device_type",getDeviceType(devicePtr->type)},
@@ -437,42 +446,96 @@ int main(int argc, char *argv[])
         };
         deviceObjects.push_back(deviceObject);
     }
-    QJsonArray mountpointObjects {};
-    {//mount_ponts
-        const QString fstabPath {"/etc/fstab"};
-        QFile file {fstabPath};
-        if(file.open(QIODevice::ReadOnly)){
-            const auto lines {file.readAll().split('\n')};
-            file.close();
-            std::for_each(lines.begin(),lines.end(),[&](const QByteArray& line){
-                const QString tempLine {line};
-                if(!tempLine.startsWith("#") && !tempLine.isEmpty()){
-                    const QJsonObject mountpointObject{
-                        {"file_system",tempLine.section(' ',0,0,QString::SectionSkipEmpty).simplified()},
-                        {"mount_point",tempLine.section(' ',1,1,QString::SectionSkipEmpty).simplified()},
-                        {"mntpoint_type",tempLine.section(' ',2,2,QString::SectionSkipEmpty).simplified()},
-                        {"options",tempLine.section(' ',3,3,QString::SectionSkipEmpty).simplified()},
-                        {"dump",tempLine.section(' ',4,4,QString::SectionSkipEmpty).simplified()},
-                        {"pass",tempLine.section(' ',5,5,QString::SectionSkipEmpty).simplified()}
-                    };
-                    mountpointObjects.push_back(mountpointObject);
-                }
-            });
-        }
-    }
-    QJsonArray filesystemOObjects {};
-    for(const auto& path: partitionPathSet){
-        const QJsonObject filesystemObject {getFilesysObject(path)};
-        if(!filesystemObject.isEmpty()){
-            filesystemOObjects.push_back(filesystemObject);
-        }
-    }
-    const QJsonObject outObject {
-        {"volumes",filesystemOObjects},
-        {"devices",deviceObjects},
-        {"mount_points",mountpointObjects}
-    };
     ped_device_free_all();
+
+    QJsonArray partitionNextObjects {};
+    QJsonArray physDeviceObjects {};
+    std::for_each(qAsConst(deviceObjects).begin(),qAsConst(deviceObjects).end(),[&](const QJsonValue& jsonValue){
+        const QJsonObject deviceObject {jsonValue.toObject()};
+        const QJsonObject diskObject {deviceObject.value("disk").toObject()};
+        const QJsonArray partitionArray=diskObject.value("partitions").toArray();
+
+        QJsonArray partitionObjects {};
+        std::for_each(qAsConst(partitionArray).begin(),qAsConst(partitionArray).end(),[&](const QJsonValue& jsonValue){
+            const QJsonObject jsonObject {jsonValue.toObject()};
+            partitionNextObjects.push_back(jsonObject);
+
+            const QJsonObject partitionObject {
+                {"partition_end",jsonObject.value("partition_end")},
+                {"boot_partition",jsonObject.value("boot_partition")},
+                {"partition_length",jsonObject.value("partition_length")},
+                {"index",jsonObject.value("partition_number")},
+                {"id_disk",jsonObject.value("partition_path")},
+                {"name",jsonObject.value("partition_path")},
+                {"start_sector",jsonObject.value("partition_start")},
+                {"partition_type",jsonObject.value("partition_type")},
+                {"device_id",jsonObject.value("partition_uuid")}
+            };
+            partitionObjects.push_back(partitionObject);
+        });
+
+        const QJsonObject physDiskObject {
+            {"description",deviceObject.value("device_label").toString()},
+            {"guid",deviceObject.value("device_uuid").toString()},
+            {"bytes_per_sector",deviceObject.value("logical_sector_size").toDouble()},
+            {"id_ph_disk",deviceObject.value("path").toString()},
+            {"bytes_per_sector_physical",deviceObject.value("physical_sector_size").toDouble()},
+            {"partitions",partitionObjects}
+        };
+
+        QJsonObject  physDeviceObject {
+            {"bios_cylinder_size",deviceObject.value("bios_cylinder_size").toDouble()},
+            {"bios_cylinders",deviceObject  .value("bios_cylinders").toDouble()},
+            {"bios_heads",deviceObject.value("bios_heads").toDouble()},
+            {"bios_sectors",deviceObject.value("bios_sectors").toDouble()},
+            {"interface_type",deviceObject.value("device_type").toString()},
+            {"tracks_per_cylinder",deviceObject .value("hw_cylinder_size").toDouble()},
+            {"total_cylinders",deviceObject.value("hw_cylinders").toDouble()},
+            {"total_heads",deviceObject.value("hw_heads").toDouble()},
+            {"sectors_per_track",deviceObject.value("hw_sectors").toDouble()},
+            {"disk_model",deviceObject.value("model").toString()},
+            {"interface_connection",deviceObject.value("path").toString()},
+            {"device_id",deviceObject.value("path").toString()},
+            {"index",deviceObject.value("path").toString()},
+            {"size",deviceObject.value("size").toDouble()},
+            {"serial_number",""},
+            {"disk_type",""},
+            {"disk",physDiskObject}
+        };
+
+        physDeviceObjects.push_back(physDeviceObject);
+    });
+
+    const QJsonArray mountpointObjects {getMountpointObjects()};
+
+    QJsonArray volumeObjects {};
+    std::for_each(qAsConst(partitionNextObjects).begin(),qAsConst(partitionNextObjects).end(),[&](const QJsonValue  & jsonValue){
+        const QJsonObject jsonObject {jsonValue.toObject()};
+        if(jsonObject.contains("partition_file_system") && !jsonObject.value("partition_file_system").toString().isEmpty()){
+            const QString partPath {jsonObject.value("partition_path").toString()};
+            QJsonObject volumeObject {
+                {"file_system",jsonObject.value("partition_file_system")},
+                {"disk_index ",partPath},
+                {"label",jsonObject.value("partition_name")},
+                {"device_id",jsonObject.value("partition_uuid")}
+            };
+            const auto filesysMap {getFilesysObject(partPath)};
+            if(!filesysMap.isEmpty()){
+                auto begin {filesysMap.begin()};
+                while(begin!=filesysMap.end()){
+                    volumeObject.insert(begin.key(),QJsonValue::fromVariant(begin.value()));
+                    ++begin;
+                }
+            }
+            volumeObjects.push_back(volumeObject);
+        }
+    });
+
+    const QJsonObject outObject {
+        {"volumes",volumeObjects},
+        {"mountpoints",mountpointObjects},
+        {"physical_devices",physDeviceObjects}
+    };
     std::cout<<QJsonDocument(outObject).toJson().toStdString();
     return 0;
 }
