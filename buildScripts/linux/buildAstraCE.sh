@@ -21,7 +21,7 @@ PARTED_DIR=${BUILD_DIR}/../../../3rdparty/parted
 #cmake options
 CMAKE_PATH="/usr/bin/cmake"
 CMAKE_MAKE_PROGRAM="/usr/bin/ninja"
-CMAKE_PREFIX_PATH="${HOME_DIR}/Qt/Qt5.14.2/5.14.2/gcc_64"
+CMAKE_PREFIX_PATH="${HOME_DIR}/Qt/Qt5.12.12/5.12.12/gcc_64"
 QT_QMAKE_EXECUTABLE="${CMAKE_PREFIX_PATH}"/bin/qmake
 Qt5_DIR="${CMAKE_PREFIX_PATH}/lib/cmake/Qt5"
 CQTDEPLOYER_DIR="${HOME_DIR}/Qt/CQtDeployer/1.5"
