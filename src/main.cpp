@@ -28,6 +28,7 @@
 
 #define EXT2_MIN_BLOCK_LOG_SIZE		10
 
+//from e2fsprogs->misc->dunpe2fs.c->e2fsprogs->lib->e2p->ls.c
 QMap<QString,QVariant> getFilesysObject(const QString& partPath)
 {
     int flags {EXT2_FLAG_JOURNAL_DEV_OK | EXT2_FLAG_SOFTSUPP_FEATURES | EXT2_FLAG_64BITS};
@@ -319,13 +320,16 @@ int main(int argc, char *argv[])
         }
     };
 
+    //from fdisk.c/parted.c
     QJsonArray deviceObjects {};
     PedDevice *devicePtr {nullptr};
     ped_device_probe_all();
-    //devices
+
+    //device
     while((devicePtr = ped_device_get_next(devicePtr))){
         QJsonObject diskObject {};
 
+        //disk
         PedDisk* diskPtr {ped_disk_new(devicePtr)};
         if(diskPtr){
             const PedDiskType* diskTypePtr {diskPtr->type};
@@ -346,6 +350,7 @@ int main(int argc, char *argv[])
             diskObject.insert("table_type",tableType);
             diskObject.insert("disk_flags",diskFlagNames);
 
+            //partitions
             QJsonArray partitionObjects {};
             PedPartition* partitionPtr {diskPtr->part_list};
             while(partitionPtr!=nullptr){
@@ -377,6 +382,7 @@ int main(int argc, char *argv[])
                 }
                 const bool partIsBootable {partitionFlagNames.contains("boot") ? true : false};
 
+                //from libblkid
                 QString partUuid {};
                 {
                     blkid_probe blkidProbe {blkid_new_probe_from_filename(qPrintable(partPath))};
@@ -413,6 +419,8 @@ int main(int argc, char *argv[])
 
         const PedCHSGeometry biosGeom {devicePtr->bios_geom};
         const PedCHSGeometry hwGeometry {devicePtr->hw_geom};
+
+        //from libblkid
         QString deviceUuid {};
         QString deviceLabel {};
         {
