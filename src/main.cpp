@@ -11,15 +11,10 @@
 #include <QSet>
 #include <iostream>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <linux/hdreg.h>
-#include <ext2fs/ext2_types.h>
 #include <ext2fs/ext2fs.h>
 #include <ext2fs/ext2_fs.h>
+#include <ext2fs/ext2_types.h>
+
 #include <blkid/blkid.h>
 #include <sys/statvfs.h>
 #include <parted/parted.h>
@@ -438,17 +433,6 @@ int main(int argc, char *argv[])
                 deviceUuid=QString::fromLatin1(uuid);
                 deviceLabel=QString::fromLatin1(label);
                 blkid_free_probe(blkidProbe);
-            }
-        }
-        {
-            static struct hd_driveid driveId;
-            int fd=open("/dev/sda",O_RDONLY|O_NONBLOCK);
-            if(fd>0){
-                if(ioctl(fd,HDIO_GET_IDENTITY,driveId)){
-                    qDebug("Model: %s",driveId.model);
-                    qDebug("Serial: %s",driveId.serial_no);
-                    int n=0;
-                }
             }
         }
 
