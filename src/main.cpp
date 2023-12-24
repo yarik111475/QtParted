@@ -11,6 +11,12 @@
 #include <QSet>
 #include <iostream>
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <linux/hdreg.h>
 #include <ext2fs/ext2_types.h>
 #include <ext2fs/ext2fs.h>
 #include <ext2fs/ext2_fs.h>
@@ -415,13 +421,26 @@ int main(int argc, char *argv[])
                 const char* uuid {};
                 const char* label {};
                 const char* serial {};
+                const char* type {};
                 blkid_do_fullprobe(blkidProbe);
                 blkid_probe_lookup_value(blkidProbe,"UUID",&uuid,NULL);
                 blkid_probe_lookup_value(blkidProbe,"LABEL",&label,NULL);
-                blkid_probe_lookup_value(blkidProbe,"SERIAL",&label,NULL);
+                blkid_probe_lookup_value(blkidProbe,"ID_SERIAL",&serial,NULL);
+                blkid_probe_lookup_value(blkidProbe,"TYPE",&type,NULL);
                 deviceUuid=QString::fromLatin1(uuid);
                 deviceLabel=QString::fromLatin1(label);
                 blkid_free_probe(blkidProbe);
+            }
+        }
+        {
+            static struct hd_driveid driveId;
+            int fd=open("/dev/sda",O_RDONLY|O_NONBLOCK);
+            if(fd>0){
+                if(ioctl(fd,HDIO_GET_IDENTITY,driveId)){
+                    qDebug("Model: %s",driveId.model);
+                    qDebug("Serial: %s",driveId.serial_no);
+                    int n=0;
+                }
             }
         }
 
