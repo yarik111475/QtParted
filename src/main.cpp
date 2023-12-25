@@ -448,14 +448,14 @@ int main(int argc, char *argv[])
         }
 
         QString fwRevision {};
-        QString deviceSerialNum {};
+        QString deviceSerialNo {};
         {
             static struct hd_driveid driveId {};
             int fd {open(qPrintable(devicePath),O_RDONLY|O_NONBLOCK)};
             if(fd > 0){
                 if(!ioctl(fd,HDIO_GET_IDENTITY,&driveId)){
                     fwRevision=QString::fromLatin1((const char*)driveId.fw_rev,sizeof(driveId.fw_rev)).simplified();
-                    deviceSerialNum=QString::fromLatin1((const char*)driveId.serial_no,sizeof(driveId.serial_no)).simplified();
+                    deviceSerialNo=QString::fromLatin1((const char*)driveId.serial_no,sizeof(driveId.serial_no)).simplified();
                 }
             }
         }
@@ -464,7 +464,7 @@ int main(int argc, char *argv[])
             {"model",deviceModel},
             {"device_type",deviceType},
             {"path",devicePath},
-            {"serial_no",deviceSerialNum},
+            {"serial_no",deviceSerialNo},
             {"fw_revision",fwRevision},
             {"size",devicePtr->length * devicePtr->sector_size},
             {"logical_sector_size",devicePtr->sector_size},
