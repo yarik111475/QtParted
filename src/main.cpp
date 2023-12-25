@@ -447,14 +447,15 @@ int main(int argc, char *argv[])
             }
         }
 
+        QString fwRevision {};
         QString deviceSerialNum {};
         {
             static struct hd_driveid driveId {};
             int fd {open(qPrintable(devicePath),O_RDONLY|O_NONBLOCK)};
             if(fd > 0){
-                if(ioctl(fd,HDIO_GET_IDENTITY,&driveId)){
+                if(!ioctl(fd,HDIO_GET_IDENTITY,&driveId)){
+                    fwRevision=QString::fromLatin1((const char*)driveId.fw_rev,sizeof(driveId.fw_rev)).simplified();
                     deviceSerialNum=QString::fromLatin1((const char*)driveId.serial_no,sizeof(driveId.serial_no)).simplified();
-                    qDebug("Serial: %s",qPrintable(deviceSerialNum));
                 }
             }
         }
@@ -463,6 +464,8 @@ int main(int argc, char *argv[])
             {"model",deviceModel},
             {"device_type",deviceType},
             {"path",devicePath},
+            {"serial_no",deviceSerialNum},
+            {"fw_revision",fwRevision},
             {"size",devicePtr->length * devicePtr->sector_size},
             {"logical_sector_size",devicePtr->sector_size},
             {"physical_sector_size",devicePtr->phys_sector_size},
@@ -532,7 +535,8 @@ int main(int argc, char *argv[])
             {"device_id",deviceObject.value("path").toString()},
             {"index",deviceObject.value("path").toString()},
             {"size",deviceObject.value("size").toDouble()},
-            {"serial_number",""},
+            {"serial_number",deviceObject.value("serial_no").toString()},
+            {"fw_revision",deviceObject.value("fw_revision").toString()},
             {"disk_type",""},
             {"disk",physDiskObject}
         };
