@@ -11,6 +11,13 @@
 #include <QSet>
 #include <iostream>
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <linux/hdreg.h>
+
 #include <ext2fs/ext2fs.h>
 #include <ext2fs/ext2_fs.h>
 #include <ext2fs/ext2_types.h>
@@ -415,6 +422,10 @@ int main(int argc, char *argv[])
         const PedCHSGeometry biosGeom {devicePtr->bios_geom};
         const PedCHSGeometry hwGeometry {devicePtr->hw_geom};
 
+        const QString deviceModel {devicePtr->model};
+        const QString deviceType {getDeviceType(devicePtr->type)};
+        const QString devicePath {devicePtr->path};
+
         //from libblkid
         QString deviceUuid {};
         QString deviceLabel {};
@@ -436,10 +447,22 @@ int main(int argc, char *argv[])
             }
         }
 
+        QString deviceSerialNum {};
+        {
+            static struct hd_driveid driveId {};
+            int fd {open(qPrintable(devicePath),O_RDONLY|O_NONBLOCK)};
+            if(fd > 0){
+                if(ioctl(fd,HDIO_GET_IDENTITY,&driveId)){
+                    deviceSerialNum=QString::fromLatin1((const char*)driveId.serial_no,sizeof(driveId.serial_no)).simplified();
+                    qDebug("Serial: %s",qPrintable(deviceSerialNum));
+                }
+            }
+        }
+
         const QJsonObject deviceObject {
-            {"model",devicePtr->model},
-            {"device_type",getDeviceType(devicePtr->type)},
-            {"path",devicePtr->path},
+            {"model",deviceModel},
+            {"device_type",deviceType},
+            {"path",devicePath},
             {"size",devicePtr->length * devicePtr->sector_size},
             {"logical_sector_size",devicePtr->sector_size},
             {"physical_sector_size",devicePtr->phys_sector_size},
