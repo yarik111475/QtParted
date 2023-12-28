@@ -19,9 +19,9 @@ DEPLOY_DIR="${CURRENT_DIR}"/deploy
 PARTED_DIR=${BUILD_DIR}/../../../3rdparty/parted
 
 #cmake options
-CMAKE_PATH="/usr/bin/cmake"
-C_COMPILER_PATH="/usr/bin/gcc"
-CXX_COMPILER_PATH="/usr/bin/g++"
+CMAKE_PATH="${HOME_DIR}/Qt/cmake-3.26.0-rc5-linux-x86_64/bin/cmake"
+C_COMPILER_PATH="/opt/rh/devtoolset-7/root/bin/gcc"
+CXX_COMPILER_PATH="/opt/rh/devtoolset-7/root/bin/g++"
 CMAKE_MAKE_PROGRAM="/usr/bin/ninja"
 CMAKE_PREFIX_PATH="${HOME_DIR}/Qt/Qt5.12.12/5.12.12/gcc_64"
 QT_QMAKE_EXECUTABLE="${CMAKE_PREFIX_PATH}"/bin/qmake
