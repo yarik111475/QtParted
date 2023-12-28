@@ -103,12 +103,12 @@ QMap<QString,QVariant> getFilesysObject(const QString& partPath)
             };
             const auto filesystemOsType {getFilesystemOsType(super->s_creator_os)};
             const long long inodeCount {static_cast<long long>(super->s_inodes_count)};
-            const long long blockCount {static_cast<long long>(super->s_blocks_count) |
-                                           ext2fs_has_feature_64bit(super) ? static_cast<long long>(super->s_blocks_count_hi << 32) : 0
-                                       };
-            const long long reservedBlockCount {static_cast<long long>(super->s_r_blocks_count) |
-                                                   ext2fs_has_feature_64bit(super) ? static_cast<long long>(super->s_r_blocks_count_hi << 32) : 0
-                                               };
+//            const long long blockCount {static_cast<long long>(super->s_blocks_count) |
+//                                           ext2fs_has_feature_64bit(super) ? static_cast<long long>(super->s_blocks_count_hi << 32) : 0
+//                                       };
+//            const long long reservedBlockCount {static_cast<long long>(super->s_r_blocks_count) |
+//                                                   ext2fs_has_feature_64bit(super) ? static_cast<long long>(super->s_r_blocks_count_hi << 32) : 0
+//                                               };
             const long long overheadClusters {static_cast<long long>(super->s_overhead_blocks)};
             const long long freeBlocks {static_cast<long long>(super->s_free_blocks_count)};
             const long long freeInodes {static_cast<long long>(super->s_free_inodes_count)};
@@ -135,8 +135,8 @@ QMap<QString,QVariant> getFilesysObject(const QString& partPath)
                 {"filesystem_errors",fileSystemErrors},
                 {"filesystem_os_type",filesystemOsType},
                 {"inode_count",inodeCount},
-                {"block_count",blockCount},
-                {"reserved_block_count",reservedBlockCount},
+                //{"block_count",blockCount},
+                //{"reserved_block_count",reservedBlockCount},
                 {"overhead_clusters",overheadClusters},
                 {"free_blocks",freeBlocks},
                 {"free_inodes",freeInodes},
@@ -148,25 +148,25 @@ QMap<QString,QVariant> getFilesysObject(const QString& partPath)
                 {"max_mount_count",maxMountCount},
                 {"checked_interval",checkedInterval}
             };
-            if(ext2fs_has_feature_bigalloc(super)){
-                filesysObject.insert("cluster_size",EXT2_CLUSTER_SIZE(super));
-            }
-            else{
-                filesysObject.insert("fragment_size",EXT2_CLUSTER_SIZE(super));
-            }
-            if(ext2fs_has_feature_64bit(super)){
-                filesysObject.insert("group_descriptor_size",static_cast<long long>(super->s_desc_size));
-            }
-            if(super->s_reserved_gdt_blocks){
-                filesysObject.insert("reserved_GDT_blocks",static_cast<uint16_t>(super->s_reserved_gdt_blocks));
-            }
-            filesysObject.insert("blocks_per_group",static_cast<long long>(super->s_blocks_per_group));
-            if(ext2fs_has_feature_bigalloc(super)){
-                filesysObject.insert("cluster_per_group",static_cast<long long>(super->s_clusters_per_group));
-            }
-            else{
-                filesysObject.insert("fragment_per_group",static_cast<long long>(super->s_clusters_per_group));
-            }
+//            if(ext2fs_has_feature_bigalloc(super)){
+//                filesysObject.insert("cluster_size",EXT2_CLUSTER_SIZE(super));
+//            }
+//            else{
+//                filesysObject.insert("fragment_size",EXT2_CLUSTER_SIZE(super));
+//            }
+//            if(ext2fs_has_feature_64bit(super)){
+//                filesysObject.insert("group_descriptor_size",static_cast<long long>(super->s_desc_size));
+//            }
+//            if(super->s_reserved_gdt_blocks){
+//                filesysObject.insert("reserved_GDT_blocks",static_cast<uint16_t>(super->s_reserved_gdt_blocks));
+//            }
+//            filesysObject.insert("blocks_per_group",static_cast<long long>(super->s_blocks_per_group));
+//            if(ext2fs_has_feature_bigalloc(super)){
+//                filesysObject.insert("cluster_per_group",static_cast<long long>(super->s_clusters_per_group));
+//            }
+//            else{
+//                filesysObject.insert("fragment_per_group",static_cast<long long>(super->s_clusters_per_group));
+//            }
             if(super->s_raid_stride){
                 filesysObject.insert("raid_stride",static_cast<int>(super->s_raid_stride));
             }
@@ -216,22 +216,22 @@ QMap<QString,QVariant> getFilesysObject(const QString& partPath)
             if(super->s_last_orphan)
                 filesysObject.insert("first_orphan_inode",static_cast<long long>(super->s_last_orphan));
 
-            if(ext2fs_has_feature_dir_index(super) || super->s_def_hash_version){
-                const auto getHash{[](char version){
-                        const std::map<char,QString> hashesMap {
-                            {EXT2_HASH_LEGACY,"legacy"},
-                            {EXT2_HASH_HALF_MD4,"half_md4"},
-                            {EXT2_HASH_TEA,"tea"}
-                        };
-                        const auto it {hashesMap.find(version)};
-                        if(it!=hashesMap.cend()){
-                            return it->second;
-                        }
-                        return QString{};
-                    }
-                };
-                filesysObject .insert("default_directory_hash",getHash(super->s_def_hash_version));
-            }
+//            if(ext2fs_has_feature_dir_index(super) || super->s_def_hash_version){
+//                const auto getHash{[](char version){
+//                        const std::map<char,QString> hashesMap {
+//                            {EXT2_HASH_LEGACY,"legacy"},
+//                            {EXT2_HASH_HALF_MD4,"half_md4"},
+//                            {EXT2_HASH_TEA,"tea"}
+//                        };
+//                        const auto it {hashesMap.find(version)};
+//                        if(it!=hashesMap.cend()){
+//                            return it->second;
+//                        }
+//                        return QString{};
+//                    }
+//                };
+//                filesysObject .insert("default_directory_hash",getHash(super->s_def_hash_version));
+//            }
 
             if(sizeof(super->s_hash_seed)!=0){
                 const auto bUuid {QByteArray::fromRawData((const char*)super->s_hash_seed,sizeof(super->s_hash_seed))};
